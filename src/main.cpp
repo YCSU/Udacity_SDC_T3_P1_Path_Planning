@@ -161,6 +161,20 @@ vector<double> getXY(double s, double d, vector<double> maps_s, vector<double> m
 
 }
 
+
+double cost_velocity(double v_other, double v_ref){
+  if(v_other < v_ref){
+    return pow((v_other - v_ref) / v_ref, 2.);
+  }else{
+    return pow((v_other - v_ref) / v_ref, 2.);
+  }
+}
+
+double cost_s(double s_other, double s, double coef){
+  return coef / pow((s_other-s), 2.);
+}
+
+
 int main() {
   uWS::Hub h;
 
@@ -249,12 +263,57 @@ int main() {
               car_s = end_path_s;
             }
 
+            vector<double> costs {0., 0., 0.};
             bool too_close = false;
-
-            //find ref_V to use
+            
             for(int i = 0; i < sensor_fusion.size(); ++i){
-              //see if  a car is in the smae lane
               float d = sensor_fusion[i][6];
+              
+              /////////////////////////////////////////
+              double vx = sensor_fusion[i][3];
+              double vy = sensor_fusion[i][4];
+              double check_speed = sqrt(vx*vx + vy*vy);
+              double check_car_s = sensor_fusion[i][5];
+              check_car_s += (double)prev_size * 0.02 * check_speed;
+              
+
+              // Another car is in the front
+              if(check_car_s > car_s && (check_car_s - car_s) < 20){
+                
+                if( d > 0 && d < 4){
+                  costs[0] += cost_velocity(check_speed, ref_vel)
+                            + cost_s(check_car_s, car_s, 1000.);
+                }else if(d > 4 && d < 8){
+                  costs[1] += cost_velocity(check_speed, ref_vel)
+                            + cost_s(check_car_s, car_s, 1000.);
+                }else{
+                  costs[2] += cost_velocity(check_speed, ref_vel)
+                            + cost_s(check_car_s, car_s, 1000.);
+                }
+              }
+
+              if(check_car_s < car_s && (car_s - check_car_s) < 15){
+                
+                if( d > 0 && d < 4 && car_d > 4 && car_d < 8){
+                  costs[0] += cost_s(check_car_s, car_s, 5000.);
+                }else if(d > 4 && d < 8 && car_d < 4 && car_d > 8){
+                  costs[1] += cost_s(check_car_s, car_s, 5000.);
+                }else if(car_d > 4 && car_d < 8){
+                  costs[2] += cost_s(check_car_s, car_s, 5000.);
+                }
+              }
+
+              if(d < (2 + 4*lane + 2) && d > (2 + 4*lane - 2)){
+                if(check_car_s > car_s && (check_car_s - car_s) < 20){
+                  too_close = true;
+                }
+              }
+              ////////////////////////////////////////////
+
+              /*
+              ////////////////////////////////////////////
+
+              //see if  a car is in the smae lane
               if(d < (2 + 4*lane + 2) && d > (2 + 4*lane - 2)){
                 double vx = sensor_fusion[i][3];
                 double vy = sensor_fusion[i][4];
@@ -273,12 +332,23 @@ int main() {
                   }
                 }
               }
+              ////////////////////////////////////////////
+              */
             }
-
+            
+            double min = costs[lane];
+            cout << sensor_fusion.size() << endl;
+            for(int idx = 0; idx < costs.size(); ++idx){
+              cout << idx << "  "<< costs[idx] << endl;
+              if(costs[idx] < min && abs(lane - idx) == 1){
+                lane = idx;
+              } 
+            }
+            
             if(too_close) {
-              ref_vel -= 0.15;
-            } else if (ref_vel < 49.3){
-              ref_vel += 0.4;
+              ref_vel -= 0.25;
+            } else if (ref_vel < 48){
+              ref_vel += 0.25;
             }
           	
 

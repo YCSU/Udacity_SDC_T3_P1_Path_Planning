@@ -220,7 +220,7 @@ int main() {
   int lane = 1;
   // reference velocity
   double ref_vel = 0; //mph
-
+  // consume at least 80 waypoint before change lane
   int count_waypoint = 80;
 
   h.onMessage([&ref_vel, &lane, &count_waypoint, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
@@ -276,16 +276,17 @@ int main() {
             for(int i = 0; i < sensor_fusion.size(); ++i){
               float d = sensor_fusion[i][6];
               
-              /////////////////////////////////////////
+              
               double vx = sensor_fusion[i][3];
               double vy = sensor_fusion[i][4];
               double check_speed = sqrt(vx*vx + vy*vy);
               double check_car_s = sensor_fusion[i][5];
               double check_car_end_s = check_car_s;
+              // cars position in the future
               check_car_end_s += (double)prev_size * 0.02 * check_speed;
               
-
-              // Another car is in the front
+              //// Calculate cost funtion for each lane //////////
+              // Cars in the front in the future
               if(check_car_end_s > car_end_s && (check_car_end_s - car_end_s) < 30){
                 if( d > 0 && d < 4){
                   costs[0] += cost_velocity(check_speed, car_speed)
@@ -299,7 +300,8 @@ int main() {
                 }
               }
 
-              if(fabs(car_s - check_car_s) < 15){
+              // Cars on different lanes rigth now
+              if(fabs(car_s - check_car_s) < 15.){
                 if( d > 0 && d < 4 && car_d > 4 && car_d < 8){
                   costs[0] += cost_velocity_back(check_speed, car_speed)
                             + cost_s(check_car_s, car_s, 10000.);
@@ -312,50 +314,27 @@ int main() {
                 }
               }
 
+              // If the car is too close right now or in the future
               if(d < (car_d + 1.5) && d > (car_d - 1.5)){
                 if(check_car_s > car_s && (check_car_s - car_s) < 10){
-                  ref_vel -= 0.3;
+                  ref_vel -= 0.3; // Prevent collsions with the car which suddenly change lane in the front
                 }
                 if(check_car_end_s > car_end_s && (check_car_end_s - car_end_s) < 30){
                   too_close = true;
                 }
               }
-              ////////////////////////////////////////////
-
-              /*
-              ////////////////////////////////////////////
-
-              //see if  a car is in the smae lane
-              if(d < (2 + 4*lane + 2) && d > (2 + 4*lane - 2)){
-                double vx = sensor_fusion[i][3];
-                double vy = sensor_fusion[i][4];
-                double check_speed = sqrt(vx*vx + vy*vy);
-                double check_car_s = sensor_fusion[i][5];
-                // project the position of the car after our's consume 
-                // all the points int the previous_path
-                check_car_s += (double)prev_size * 0.02 * check_speed;
-                //check if the car is in fron of us and the gap is less than 30m
-                if(check_car_s > car_s && (check_car_s - car_s) < 30){
-                  too_close = true;
-                  if(lane > 0){
-                    lane -= 1;
-                  } else{
-                    lane += 1;
-                  }
-                }
-              }
-              ////////////////////////////////////////////
-              */
+              /////////////////////////////////////////////////
             }
             
             double min = costs[lane];
-            //cout << sensor_fusion.size() << endl;
             cout << "cost for each lane------" << endl;
             count_waypoint -= 1;
+            // Prevent overfloat
             if(count_waypoint < -1000){
               count_waypoint = -1;
             }
-            cout << "count_waypoint " << count_waypoint << endl; 
+            cout << "count_waypoint " << count_waypoint << endl;
+            // Find the lane which has the minimun cost
             for(int idx = 0; idx < costs.size(); ++idx){
               cout << idx << "  "<< costs[idx] << endl;
               if(costs[idx] < min && abs(lane - idx) == 1 && count_waypoint < 0){
@@ -465,40 +444,6 @@ int main() {
               next_y_vals.push_back(y_point);
             }
 
-
-
-
-
-
-
-            /*
-          	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-            
-            vector<double> temp_x(5);
-            vector<double> temp_y(5);
-            double temp_s;
-            double temp_d;
-            double dist_inc = 0.4;
-            for(int i = 0; i < 3; ++i){
-              temp_s = car_s + (i+1)*dist_inc*10;
-              temp_d = 2;
-              vector<double> xy = getXY(temp_s, temp_d, map_waypoints_s, map_waypoints_x ,map_waypoints_y);
-              temp_x.push_back(xy[0]);
-              temp_y.push_back(xy[0]);
-            }
-            tk::spline spline_fit;
-            spline_fit.set_points(temp_x, temp_y);
-
-
-            for(int i = 0; i < 30; ++i){
-              double next_s = car_s + (i+1)*dist_inc;
-              double next_d = 2;
-              vector<double> xy = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x ,map_waypoints_y);
-
-              next_x_vals.push_back(xy[0]);
-              next_y_vals.push_back(spline_fit(xy[0]));
-            }
-            */
 
             msgJson["next_x"] = next_x_vals;
           	msgJson["next_y"] = next_y_vals;

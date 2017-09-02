@@ -312,9 +312,9 @@ int main() {
                 }
               }
 
-              if(d < (2 + 4*lane + 2) && d > (2 + 4*lane - 2)){
-                if(check_car_s > car_s && (check_car_s - car_s) < 15){
-                  ref_vel -= 0.5;
+              if(d < (car_d + 1.5) && d > (car_d - 1.5)){
+                if(check_car_s > car_s && (check_car_s - car_s) < 10){
+                  ref_vel -= 0.3;
                 }
                 if(check_car_end_s > car_end_s && (check_car_end_s - car_end_s) < 30){
                   too_close = true;

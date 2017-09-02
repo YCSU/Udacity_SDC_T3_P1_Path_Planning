@@ -163,8 +163,12 @@ vector<double> getXY(double s, double d, vector<double> maps_s, vector<double> m
 
 
 double cost_velocity(double v_other, double v_ref){
-  if(v_other < v_ref){
     return pow((v_other - v_ref) / v_ref, 2.);
+}
+
+double cost_velocity_back(double v_other, double v_ref){
+  if(v_other < v_ref){
+    return 0;
   }else{
     return pow((v_other - v_ref) / v_ref, 2.);
   }
@@ -217,7 +221,9 @@ int main() {
   // reference velocity
   double ref_vel = 0; //mph
 
-  h.onMessage([&ref_vel, &lane, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  int count_waypoint = 80;
+
+  h.onMessage([&ref_vel, &lane, &count_waypoint, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -232,7 +238,6 @@ int main() {
         auto j = json::parse(s);
         
         string event = j[0].get<string>();
-        
         if (event == "telemetry") {
           // j[1] is the data JSON object
           
@@ -257,10 +262,12 @@ int main() {
           	json msgJson;
 
             int prev_size = previous_path_x.size();
-
+            double car_end_s;
             if(prev_size > 0)
             {
-              car_s = end_path_s;
+              car_end_s = end_path_s;
+            }else{
+              car_end_s = car_s;
             }
 
             vector<double> costs {0., 0., 0.};
@@ -274,37 +281,42 @@ int main() {
               double vy = sensor_fusion[i][4];
               double check_speed = sqrt(vx*vx + vy*vy);
               double check_car_s = sensor_fusion[i][5];
-              check_car_s += (double)prev_size * 0.02 * check_speed;
+              double check_car_end_s = check_car_s;
+              check_car_end_s += (double)prev_size * 0.02 * check_speed;
               
 
               // Another car is in the front
-              if(check_car_s > car_s && (check_car_s - car_s) < 20){
-                
+              if(check_car_end_s > car_end_s && (check_car_end_s - car_end_s) < 30){
                 if( d > 0 && d < 4){
                   costs[0] += cost_velocity(check_speed, ref_vel)
-                            + cost_s(check_car_s, car_s, 1000.);
+                            + cost_s(check_car_end_s, car_end_s, 1000.);
                 }else if(d > 4 && d < 8){
                   costs[1] += cost_velocity(check_speed, ref_vel)
-                            + cost_s(check_car_s, car_s, 1000.);
-                }else{
+                            + cost_s(check_car_end_s, car_end_s, 1000.);
+                }else if(d > 8 && d < 12){
                   costs[2] += cost_velocity(check_speed, ref_vel)
-                            + cost_s(check_car_s, car_s, 1000.);
+                            + cost_s(check_car_end_s, car_end_s, 1000.);
                 }
               }
 
-              if(check_car_s < car_s && (car_s - check_car_s) < 15){
-                
+              if(fabs(car_s - check_car_s) < 15){
                 if( d > 0 && d < 4 && car_d > 4 && car_d < 8){
-                  costs[0] += cost_s(check_car_s, car_s, 5000.);
-                }else if(d > 4 && d < 8 && car_d < 4 && car_d > 8){
-                  costs[1] += cost_s(check_car_s, car_s, 5000.);
-                }else if(car_d > 4 && car_d < 8){
-                  costs[2] += cost_s(check_car_s, car_s, 5000.);
+                  costs[0] += cost_velocity_back(check_speed, ref_vel)
+                            + cost_s(check_car_s, car_s, 10000.);
+                }else if(d > 4 && d < 8 && (car_d < 4 || car_d > 8)){
+                  costs[1] += cost_velocity_back(check_speed, ref_vel)
+                            + cost_s(check_car_s, car_s, 10000.);
+                }else if(d > 8 && d < 12 && car_d > 4 && car_d < 8){
+                  costs[2] += cost_velocity_back(check_speed, ref_vel)
+                            + cost_s(check_car_s, car_s, 10000.);
                 }
               }
 
               if(d < (2 + 4*lane + 2) && d > (2 + 4*lane - 2)){
-                if(check_car_s > car_s && (check_car_s - car_s) < 20){
+                if(check_car_s > car_s && (check_car_s - car_s) < 15){
+                  ref_vel -= 0.25;
+                }
+                if(check_car_end_s > car_end_s && (check_car_end_s - car_end_s) < 30){
                   too_close = true;
                 }
               }
@@ -337,18 +349,24 @@ int main() {
             }
             
             double min = costs[lane];
-            cout << sensor_fusion.size() << endl;
+            //cout << sensor_fusion.size() << endl;
+            cout << "cost for each lane------" << endl;
+            count_waypoint -= 1;
+            if(count_waypoint < -1000)
+            cout << "count_waypoint " << count_waypoint << endl; 
             for(int idx = 0; idx < costs.size(); ++idx){
               cout << idx << "  "<< costs[idx] << endl;
-              if(costs[idx] < min && abs(lane - idx) == 1){
+              if(costs[idx] < min && abs(lane - idx) == 1 && count_waypoint < 0){
                 lane = idx;
+                count_waypoint = 80;
+                cout << "***change lane to " << lane << endl;
               } 
             }
             
             if(too_close) {
-              ref_vel -= 0.25;
-            } else if (ref_vel < 48){
-              ref_vel += 0.25;
+              ref_vel -= 0.1;
+            } else if (ref_vel < 49){
+              ref_vel += 0.1;
             }
           	
 
@@ -385,9 +403,9 @@ int main() {
             }
 
             // add 30m spaced points ahead of the starting reference
-            vector<double> next_wp0 = getXY(car_s+30, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-            vector<double> next_wp1 = getXY(car_s+60, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-            vector<double> next_wp2 = getXY(car_s+90, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            vector<double> next_wp0 = getXY(car_end_s+30, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            vector<double> next_wp1 = getXY(car_end_s+60, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            vector<double> next_wp2 = getXY(car_end_s+90, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
             ptsx.push_back(next_wp0[0]);
             ptsx.push_back(next_wp1[0]);

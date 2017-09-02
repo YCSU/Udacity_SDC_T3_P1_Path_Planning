@@ -352,7 +352,9 @@ int main() {
             //cout << sensor_fusion.size() << endl;
             cout << "cost for each lane------" << endl;
             count_waypoint -= 1;
-            if(count_waypoint < -1000)
+            if(count_waypoint < -1000){
+              count_waypoint = -1;
+            }
             cout << "count_waypoint " << count_waypoint << endl; 
             for(int idx = 0; idx < costs.size(); ++idx){
               cout << idx << "  "<< costs[idx] << endl;

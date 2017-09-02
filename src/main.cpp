@@ -288,33 +288,33 @@ int main() {
               // Another car is in the front
               if(check_car_end_s > car_end_s && (check_car_end_s - car_end_s) < 30){
                 if( d > 0 && d < 4){
-                  costs[0] += cost_velocity(check_speed, ref_vel)
+                  costs[0] += cost_velocity(check_speed, car_speed)
                             + cost_s(check_car_end_s, car_end_s, 1000.);
                 }else if(d > 4 && d < 8){
-                  costs[1] += cost_velocity(check_speed, ref_vel)
+                  costs[1] += cost_velocity(check_speed, car_speed)
                             + cost_s(check_car_end_s, car_end_s, 1000.);
                 }else if(d > 8 && d < 12){
-                  costs[2] += cost_velocity(check_speed, ref_vel)
+                  costs[2] += cost_velocity(check_speed, car_speed)
                             + cost_s(check_car_end_s, car_end_s, 1000.);
                 }
               }
 
               if(fabs(car_s - check_car_s) < 15){
                 if( d > 0 && d < 4 && car_d > 4 && car_d < 8){
-                  costs[0] += cost_velocity_back(check_speed, ref_vel)
+                  costs[0] += cost_velocity_back(check_speed, car_speed)
                             + cost_s(check_car_s, car_s, 10000.);
                 }else if(d > 4 && d < 8 && (car_d < 4 || car_d > 8)){
-                  costs[1] += cost_velocity_back(check_speed, ref_vel)
+                  costs[1] += cost_velocity_back(check_speed, car_speed)
                             + cost_s(check_car_s, car_s, 10000.);
                 }else if(d > 8 && d < 12 && car_d > 4 && car_d < 8){
-                  costs[2] += cost_velocity_back(check_speed, ref_vel)
+                  costs[2] += cost_velocity_back(check_speed, car_speed)
                             + cost_s(check_car_s, car_s, 10000.);
                 }
               }
 
               if(d < (2 + 4*lane + 2) && d > (2 + 4*lane - 2)){
                 if(check_car_s > car_s && (check_car_s - car_s) < 15){
-                  ref_vel -= 0.25;
+                  ref_vel -= 0.5;
                 }
                 if(check_car_end_s > car_end_s && (check_car_end_s - car_end_s) < 30){
                   too_close = true;

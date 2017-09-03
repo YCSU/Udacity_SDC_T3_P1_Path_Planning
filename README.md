@@ -9,6 +9,13 @@ The planner is implemented in `src/main.cpp`(line 264-445). There are two steps 
 In the following we will discuss the details of the above steps and propose possible improvements for the current implementation.
 
 ### Choosing the lane and the speed
+To decide which lane to take in each cycle, we define some cost functions (line 165-180). Each lane has its own cost value that starts with 0 in each cycle. We caculate the predicted positions of our own car and other cars, which are car_end_s and check_car_end_s in the Frenet coordinate. Then we add penalties to the cost value (line 289-316) if it is in one of the following situations:
+
+* (line 291-301) A car is in the same lane in the front and the _predicted_ Frenet s distance in is less than 30m. The penalty take velocity and distance into account so that it encourage our car to change lane when the car in the front drive slower than our car does. 
+* (line 305-316) There are other cars on the lane next to our car, and the _current_ Frenet s distance is within 15m. This discourages the car to change lane when other cars next to the current lane are too close.
+* In addition, if there is a car in the front, and the _current_ Frenet s distance is within 10m, the vlocity is decreased to avoid hitting.
+
+After calculating penalties for each lane, the lane with the smallest penalty is chosen. However, to prevent hitting other cars and exceeding the acceleration and jerk limits, the car can only change one lane at a time and it must consume 80 waypoints before it changes lane (line 330-346).
 
 ### Generating a trajectory
 

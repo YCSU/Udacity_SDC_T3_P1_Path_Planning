@@ -1,7 +1,7 @@
 # Path Planning
 
-   
-### Simulator.
+## Instruction   
+### Simulator
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
 
 ### Goals

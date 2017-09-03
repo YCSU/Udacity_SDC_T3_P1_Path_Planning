@@ -6,7 +6,7 @@ The planner is implemented in `src/main.cpp`(line 264-445). There are two steps 
 1. Decide which lane to go and in what speed
 2. Genreate a trajectory that does not violate the acceleration and jerk limits
 
-In the following we will discuss the details of the above steps and propose possible improvements for the current implementation.
+In the following we will discuss the details of the above steps.
 
 ### Choosing the lane and the speed
 To decide which lane to take in each cycle, we define some cost functions (line 165-180). Each lane has its own cost value that starts with 0 in each cycle. We caculate the predicted positions of our own car and other cars, which are car_end_s and check_car_end_s in the Frenet coordinate. Then we add penalties to the cost value (line 289-316) if it is in one of the following situations:
@@ -21,10 +21,11 @@ After calculating penalties for each lane, the lane with the smallest penalty is
 Here we follow the method intorduced in the project walkthrough. First of all, we collect the last two positions from the previous trajectory (line 359-385), and then we add three 30m spaced (in the Frenet coordinate) points ahead of the last position from the previous trajectory. These points are then trasformed into the vehicle's coordinate and are fittd by spline interpolation (line 387-409). Transforming the points into the vehicles coordinate help ensure that each x correponds to only one y. After the interpolation, we can generate points and then transform them back to the map coordinate. We send in 50 waypoints to the simulator in each cycle, so in this case we take the list of waypoints returned by the simulator and fill it up to 50 points (line 411-446). This completes the trajectory generation for each cycle.
 
 ### Summary
+The current implementation is able to handle most of the traffic in the simulator. Here is a [video](https://www.youtube.com/watch?v=e7_nLPLwqwc) to demonstrate the result. Currently there are only two states considered. One is staying in the current lane and the other is changing lane. For the car to drive more safely and efficiently, it is possible to consider more states, such as preparing for changing lane or following the car in the front.
 
 ## Instruction   
 ### Simulator
-You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
+You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab](https://github.com/udacity/self-driving-car-sim/releases).
 
 ### Goals
 In this project your goal is to safely navigate around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit. You will be provided the car's localization and sensor fusion data, there is also a sparse map list of waypoints around the highway. The car should try to go as close as possible to the 50 MPH speed limit, which means passing slower traffic when possible, note that other cars will try to change lanes too. The car should avoid hitting other cars at all cost as well as driving inside of the marked road lanes at all times, unless going from one lane to another. The car should be able to make one complete loop around the 6946m highway. Since the car is trying to go 50 MPH, it should take a little over 5 minutes to complete 1 loop. Also the car should not experience total acceleration over 10 m/s^2 and jerk that is greater than 50 m/s^3.

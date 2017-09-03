@@ -1,4 +1,18 @@
 # Path Planning
+This project is to design a path planner to navigate a car going through highway traffic. During the navigation process, the planner generates trajectories for the car to follow. Safety and efficiency is taken into account when generating such trajectories, that is, trying to maintain the speed and avoiding hitting other cars.
+
+The planner is implemented in `src/main.cpp`(line 264-445). There are two steps to generate a path in the current implementation:
+
+1. Decide which lane to go and in what speed
+2. Genreate a trajectory that does not violate the acceleration and jerk limits
+
+In the following we will discuss the details of the above steps and propose possible improvements for the current implementation.
+
+### Choosing the lane and the speed
+
+### Generating a trajectory
+
+### Summary
 
 ## Instruction   
 ### Simulator
